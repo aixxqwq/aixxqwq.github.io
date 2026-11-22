@@ -1,0 +1,1016 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Saribaeva Aisha</title>
+<meta name="description" content="A walkable pixel-game portfolio: follow Aisha through her projects, skills and hackathons.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Nunito:wght@500;800&family=Pinyon+Script&family=Cormorant+Garamond:ital,wght@1,500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --void: #000000;
+    --night: #170a12;
+    --plum: #4a2236;
+    --berry: #c2477a;
+    --rose: #ff8fb8;
+    --blush: #ffc8dd;
+    --petal: #fff0f6;
+    --px: "Press Start 2P", monospace;
+    --term: "VT323", monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--void); color: var(--petal); }
+  body { font-family: var(--term); font-size: 23px; line-height: 1.2; overflow-x: hidden; }
+  a { color: var(--rose); }
+  :focus-visible { outline: 4px solid var(--blush); outline-offset: 4px; }
+
+  #world { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; image-rendering: pixelated; }
+  #track { height: 1050vh; } /* scroll length = walking distance */
+
+  /* ---------- loading screen ---------- */
+  #boot { position: fixed; inset: 0; z-index: 50; background: var(--void); display: grid; place-items: center; text-align: center; transition: opacity .3s steps(3); }
+  #boot.gone { opacity: 0; pointer-events: none; }
+  #boot p { font-family: var(--px); font-size: 14px; color: var(--blush); margin-bottom: 18px; }
+  .load { width: min(320px, 70vw); height: 24px; border: 4px solid var(--blush); padding: 3px; }
+  .load i { display: block; height: 100%; width: 0; background: var(--rose); }
+
+  /* ---------- HUD ---------- */
+  .hud { position: fixed; z-index: 10; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; padding: 18px 22px; font-family: var(--px); font-size: 12px; pointer-events: none; }
+  .hud .score { display: flex; align-items: center; gap: 10px; color: var(--blush); }
+  .hud .heart { width: 20px; height: 18px; background: var(--rose); clip-path: polygon(0 25%,25% 0,50% 25%,75% 0,100% 25%,100% 50%,50% 100%,0 50%); }
+  .hud .pop { animation: pop .25s steps(3); }
+  @keyframes pop { 50% { transform: scale(1.6); } }
+  .hud .lvl { display: flex; align-items: center; gap: 12px; color: var(--petal); }
+  .hud .prog { width: 140px; height: 14px; border: 3px solid var(--blush); }
+  .hud .prog i { display: block; height: 100%; width: 0; background: var(--rose); }
+
+  /* ---------- title over the start of the level ---------- */
+  #title { position: fixed; z-index: 5; left: 0; right: 0; top: 16vh; text-align: center; pointer-events: none; transition: opacity .3s steps(3), transform .3s steps(3); }
+  #title.away { opacity: 0; transform: translateY(-30px); }
+  /* the name: elegant script on top of the pixel world, with a stepped pixel shadow */
+  #title h1 { font-family: "Pinyon Script", cursive; font-weight: 400; font-size: clamp(92px, 17vw, 210px); line-height: .95; color: var(--blush); text-shadow: 4px 4px 0 var(--berry), 8px 8px 0 var(--plum); }
+  #title p { margin-top: 26px; font-size: 28px; }
+  #title .surname { font-family: "Cormorant Garamond", serif; font-style: italic; font-weight: 500; font-size: clamp(22px, 3.2vw, 38px); color: var(--rose); letter-spacing: .32em; margin-bottom: -.1em; }
+  #title .go { margin-top: 18px; font-family: var(--px); font-size: 13px; color: var(--rose); animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* ---------- station panels ---------- */
+  .panel {
+    position: fixed; z-index: 8; top: 76px; right: 4vw; width: min(400px, 92vw);
+    background: var(--night); padding: 22px 24px 24px;
+    box-shadow: 0 -4px 0 var(--blush), 0 4px 0 var(--blush), -4px 0 0 var(--blush), 4px 0 0 var(--blush), 8px 8px 0 4px var(--berry);
+    opacity: 0; transform: translateY(-16px) scale(.96); pointer-events: none;
+    transition: opacity .2s steps(3), transform .2s steps(3);
+    max-height: calc(100vh - 110px); overflow: auto;
+  }
+  .panel.show { opacity: 1; transform: none; pointer-events: auto; }
+  .panel .who { font-family: var(--px); font-size: 11px; color: var(--rose); margin-bottom: 12px; }
+  .panel h2 { font-family: var(--px); font-weight: 400; font-size: 18px; line-height: 1.45; color: var(--blush); margin-bottom: 12px; }
+  .panel p { color: #efd6e2; margin-bottom: 10px; }
+  /* readable text inside every panel; pixel font stays for headings, labels and buttons */
+  .panel { font-family: "Nunito", sans-serif; font-size: 16.5px; line-height: 1.55; font-weight: 500; }
+  .panel li { margin: 7px 0; }
+  .panel li::before { top: 8px; }
+  .panel .stat { font-size: 15px; font-weight: 800; grid-template-columns: 96px 1fr; margin: 6px 0; }
+  .panel .slots div { font-size: 14.5px; font-weight: 800; }
+  .contacts a { font-size: 16px !important; font-weight: 800; }
+  #title p { font-family: "Nunito", sans-serif; font-size: clamp(17px, 2vw, 21px); font-weight: 800; }
+  .awards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 6px; }
+  .award { background: var(--void); padding: 14px; box-shadow: inset 0 0 0 3px var(--blush); font-family: "Nunito", sans-serif; opacity: 0; transform: translateY(8px); transition: opacity .25s steps(3), transform .25s steps(3); }
+  .panel.show .award { opacity: 1; transform: none; }
+  .panel.show .award:nth-child(2) { transition-delay: .08s; } .panel.show .award:nth-child(3) { transition-delay: .16s; }
+  .panel.show .award:nth-child(4) { transition-delay: .24s; } .panel.show .award:nth-child(5) { transition-delay: .32s; }
+  .award.wide { grid-column: 1 / -1; }
+  .logo-row { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+  .logo-row canvas { width: 84px; height: 84px; flex: none; image-rendering: pixelated; background: var(--void); box-shadow: 0 0 0 4px var(--blush), 6px 6px 0 4px var(--berry); }
+  .logo-row h2 { margin: 0 0 6px; }
+  .logo-row .soon { display: inline-block; font-size: 13px; font-weight: 800; color: var(--void); background: #a6dcb4; padding: 2px 8px; }
+  .hud { text-shadow: 2px 2px 0 #000; }
+  .award i { display: block; font-style: normal; font-size: 22px; color: var(--rose); margin-bottom: 8px; line-height: 1; }
+  .award b { display: block; font-weight: 800; font-size: 17px; color: var(--petal); line-height: 1.25; }
+  .award span { display: block; font-size: 14px; font-weight: 500; color: #d9a9bf; margin-top: 4px; line-height: 1.35; }
+  .panel ul.contacts { margin: 14px 0 0; }
+  .contacts li { padding: 0; margin: 0 0 10px; }
+  .contacts li::before { display: none; }
+  .contacts span { display: block; font-family: var(--px); font-size: 10px; color: var(--rose); margin-bottom: 4px; }
+  .contacts a { display: block; padding: 10px 12px; color: var(--petal); text-decoration: none; font-size: 22px; box-shadow: inset 0 0 0 3px var(--blush); overflow-wrap: anywhere; }
+  .contacts a:hover { background: var(--blush); color: var(--void); }
+  .me { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+  .panel .me h2 { margin: 0; font-family: "Pinyon Script", cursive; font-size: 38px; line-height: 1; color: var(--blush); }
+  .me h2 small { display: block; font-family: "Cormorant Garamond", serif; font-style: italic; font-size: 17px; letter-spacing: .28em; color: var(--rose); margin-bottom: 2px; }
+  .me img { width: 84px; height: 84px; object-fit: cover; object-position: 40% 20%; flex: none; box-shadow: 0 0 0 4px var(--blush), 6px 6px 0 4px var(--berry); }
+  .panel ul { list-style: none; margin: 8px 0 14px; }
+  .panel li { position: relative; padding-left: 24px; margin: 5px 0; }
+  .panel li::before { content: ""; position: absolute; left: 0; top: 7px; width: 10px; height: 10px; background: var(--rose); box-shadow: 3px 3px 0 var(--berry); }
+  .btns { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+  .btn { font-family: var(--px); font-size: 10px; color: var(--void); background: var(--blush); padding: 12px 14px; text-decoration: none; box-shadow: 0 4px 0 var(--berry); }
+  .btn:hover { background: var(--rose); }
+  .btn:active { transform: translateY(4px); box-shadow: none; }
+  .btn.ghost { background: transparent; color: var(--blush); box-shadow: inset 0 0 0 3px var(--blush); }
+  .stat { display: grid; grid-template-columns: 112px 1fr; gap: 12px; align-items: center; margin: 7px 0; font-size: 21px; }
+  .stat .bar { height: 14px; background: var(--plum); }
+  .stat .bar i { display: block; height: 100%; background: var(--rose); width: 0; transition: width .8s steps(8); }
+  .panel.show .stat .bar i { width: var(--w); }
+  .slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 10px 0 12px; }
+  .slots div { border: 3px solid var(--plum); padding: 10px 4px; text-align: center; font-size: 19px; }
+  .slots b { display: block; font-family: var(--px); font-weight: 400; font-size: 14px; color: var(--rose); margin-bottom: 6px; }
+
+  /* ---------- controls ---------- */
+  .hint { position: fixed; z-index: 9; bottom: 20px; left: 50%; transform: translateX(-50%); font-family: var(--px); font-size: 10px; color: #b98aa1; text-align: center; transition: opacity .3s steps(3); pointer-events: none; white-space: nowrap; }
+  .hint.hide { opacity: 0; }
+  .pad { position: fixed; z-index: 9; bottom: 18px; display: none; gap: 12px; }
+  .pad.l { left: 16px; } .pad.r { right: 16px; }
+  .pad button { width: 58px; height: 58px; font-family: var(--px); font-size: 18px; color: var(--void); background: var(--blush); border: 0; box-shadow: 0 5px 0 var(--berry); touch-action: manipulation; }
+  .pad button:active { transform: translateY(5px); box-shadow: none; }
+
+  @media (max-width: 700px) {
+    body { font-size: 20px; }
+    .panel { top: 60px; left: 4vw; right: 4vw; width: auto; max-height: 46vh; padding: 16px 18px; }
+    .panel h2 { font-size: 14px; }
+    .panel { font-size: 15px; }
+    .panel:has(.awards) { max-height: 56vh; }
+    .awards { gap: 8px; }
+    .award { padding: 9px 11px; }
+    .award i { display: inline; font-size: 15px; margin-right: 6px; }
+    .award b { display: inline; font-size: 15px; }
+    .award span { font-size: 13px; margin-top: 2px; }
+    .hud { padding: 14px; font-size: 10px; }
+    .hud .prog { width: 80px; }
+    .pad { display: flex; }
+    .hint { bottom: 92px; }
+  }
+  @media (pointer: coarse) { .pad { display: flex; } .hint { bottom: 92px; } }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div id="boot" aria-hidden="true">
+  <div><p>Loading world</p><div class="load"><i id="loadbar"></i></div></div>
+</div>
+
+<canvas id="world" aria-hidden="true"></canvas>
+
+<div class="hud">
+  <div class="score"><i class="heart" id="hicon"></i><span id="hearts">x 0</span></div>
+  <div class="lvl">World 1-1 <div class="prog"><i id="prog"></i></div></div>
+</div>
+
+<div id="title">
+  <div class="surname">Saribaeva</div>
+  <h1>Aisha</h1>
+  <p>Data Science student, developer, designer and founder</p>
+  <div class="go">Scroll to walk</div>
+</div>
+
+<!-- Panels: one for each place in the world, in walking order -->
+<section class="panel" id="p-home" aria-live="polite">
+  <div class="who">Player 1</div>
+  <div class="me">
+    <img src="photo.jpg" alt="Saribaeva Aisha" onerror="this.remove()">
+    <h2><small>Saribaeva</small>Aisha</h2>
+  </div>
+  <p>Data Science student at AIU on a state grant. I build web apps with Python and JavaScript, design the interfaces myself and use AI tools to move faster. I play hackathons and I'm building my own startup.</p>
+  <div class="stat">Python<div class="bar"><i style="--w:90%"></i></div></div>
+  <div class="stat">JavaScript<div class="bar"><i style="--w:80%"></i></div></div>
+  <div class="stat">SQL<div class="bar"><i style="--w:70%"></i></div></div>
+  <div class="stat">Design<div class="bar"><i style="--w:85%"></i></div></div>
+  <div class="stat">AI tools<div class="bar"><i style="--w:90%"></i></div></div>
+</section>
+
+<section class="panel" id="p-cqa">
+  <div class="who">Quest from a hackathon</div>
+  <h2>CQA: conversation quality</h2>
+  <p>Built for the Freedom Broker hackathon. It checks how support operators talk to clients: reads chats and calls, scores them against a checklist the team can edit, and lets operators appeal a score.</p>
+  <ul>
+    <li>AI reads the dialog and points to the exact lines as proof</li>
+    <li>The score is calculated by code, so it's fair and repeatable</li>
+    <li>Python, FastAPI, SQLite, JavaScript</li>
+  </ul>
+  <div class="btns"><a class="btn" href="https://github.com/aixxqwq/cqa.freedom" target="_blank" rel="noopener">View code</a></div>
+</section>
+
+<section class="panel" id="p-bilim">
+  <div class="who">My startup</div>
+  <h2>Bilim Buddy</h2>
+  <p>A study app with a virtual pet. Answer questions and the pet is fed, study with a timer and it grows, skip studying and it gets sad.</p>
+  <ul>
+    <li>AI teacher that explains topics and answers questions</li>
+    <li>IELTS preparation</li>
+    <li>Six pets to choose from, progress saved to your account</li>
+  </ul>
+  <div class="btns"><a class="btn" href="https://bilim-buddy.onrender.com/" target="_blank" rel="noopener">Play it</a></div>
+</section>
+
+<section class="panel" id="p-eco">
+  <div class="who">Startup in progress</div>
+  <div class="logo-row">
+    <canvas id="ecoLogo" width="96" height="96" role="img" aria-label="Temporary logo: a planet with little people standing on it"></canvas>
+    <div><h2>Ecology of the future</h2><span class="soon">Logo coming soon</span></div>
+  </div>
+  <p>A startup about protecting nature in Kazakhstan, where caring for the environment pays off.</p>
+  <ul>
+    <li>Bonuses for taking part in volunteer leagues</li>
+    <li>Priority when applying to universities</li>
+    <li>Video lessons on keeping cities and nature clean</li>
+    <li>AI that gives advice and tracks the ecology level in Kazakhstan and its cities</li>
+  </ul>
+</section>
+
+<section class="panel" id="p-chest">
+  <div class="who">You found a chest</div>
+  <h2>Inventory</h2>
+  <div class="slots">
+    <div><b>Py</b>Python</div><div><b>JS</b>JavaScript</div><div><b>DB</b>SQL</div>
+    <div><b>&lt;/&gt;</b>VS Code</div><div><b>Git</b>GitHub</div><div><b>Fg</b>Figma</div>
+  </div>
+  <p>Special ability: using AI tools to learn fast and ship prototypes quicker.</p>
+</section>
+
+<section class="panel" id="p-trophy">
+  <h2>Achievements unlocked</h2>
+  <div class="awards">
+    <div class="award"><i>★</i><b>Digital Bridge</b><span>2026 · participant</span></div>
+    <div class="award"><i>★</i><b>IT Fest Hackathon</b><span>Almaty 2025 · participant</span></div>
+    <div class="award"><i>♥</i><b>CQA</b><span>Freedom Broker hackathon</span></div>
+    <div class="award"><i>✿</i><b>Bilim Buddy</b><span>Founder</span></div>
+    <div class="award wide"><i>◆</i><b>AIU · Data Science</b><span>Student on a state grant</span></div>
+  </div>
+</section>
+
+<section class="panel" id="p-flag">
+  <div class="who">Save point</div>
+  <h2>Level complete!</h2>
+  <p>Want to team up for a hackathon or a project? Send a message.</p>
+  <ul class="contacts">
+    <li><span>Email</span><a href="mailto:aishasaribaeva5@gmail.com">aishasaribaeva5@gmail.com</a></li>
+    <li><span>GitHub</span><a href="https://github.com/aixxqwq" target="_blank" rel="noopener">aixxqwq</a></li>
+    <li><span>Telegram</span><a href="https://t.me/aixxqqq" target="_blank" rel="noopener">@aixxqqq</a></li>
+  </ul>
+</section>
+
+<div class="hint" id="hint">Scroll or press → to walk</div>
+<div class="pad l"><button id="bl" aria-label="Walk left">◀</button></div>
+<div class="pad r"><button id="br" aria-label="Walk right">▶</button></div>
+
+<div id="track"></div>
+
+<script>
+(() => {
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const cv = document.getElementById("world");
+  const main = cv.getContext("2d");
+  const mk = (w, h) => { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; };
+
+  // The world is drawn into small low-resolution buffers and scaled up without smoothing,
+  // so every pixel on screen is the same size. Screenshots, the photo and labels are drawn
+  // on top at full resolution so they stay sharp.
+  const bgC = mk(1, 1), fgC = mk(1, 1);
+  const bg = bgC.getContext("2d"), fg = fgC.getContext("2d");
+  let ctx = bg;
+
+  const C = {
+    void: "#000000", night: "#170a12", plum: "#4a2236", berry: "#c2477a", rose: "#ff8fb8",
+    blush: "#ffc8dd", petal: "#fff0f6", skin: "#ffe1d2", dim: "#2a1320", ink: "#14070f",
+  };
+
+  // ---------- small helpers ----------
+  const hash = (x, y) => { let n = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263); n = Math.imul(n ^ (n >>> 13), 1274126177); return ((n ^ (n >>> 16)) >>> 0) / 4294967296; };
+  const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => (v + .5) / 16);
+  const bayer = (x, y) => BAYER[(y & 3) * 4 + (x & 3)];
+  const hex = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+  const rect = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
+
+  // ---------- sprites: written at low resolution, then smoothed 2x (EPX) and outlined ----------
+  function epx(map) {
+    const h = map.length, w = map[0].length, g = (x, y) => (x < 0 || y < 0 || x >= w || y >= h) ? "." : map[y][x];
+    const out = Array.from({ length: h * 2 }, () => Array(w * 2).fill("."));
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const P = g(x, y), A = g(x, y - 1), B = g(x + 1, y), L = g(x - 1, y), D = g(x, y + 1);
+      let p1 = P, p2 = P, p3 = P, p4 = P;
+      if (L === A && L !== D && A !== B) p1 = A;
+      if (A === B && A !== L && B !== D) p2 = B;
+      if (D === L && D !== B && L !== A) p3 = L;
+      if (B === D && B !== A && D !== L) p4 = D;
+      out[2 * y][2 * x] = p1; out[2 * y][2 * x + 1] = p2; out[2 * y + 1][2 * x] = p3; out[2 * y + 1][2 * x + 1] = p4;
+    }
+    return out.map(r => r.join(""));
+  }
+  function outline(map) {
+    const h = map.length + 2, w = map[0].length + 2;
+    const g = (x, y) => (x < 1 || y < 1 || x > w - 2 || y > h - 2) ? "." : map[y - 1][x - 1];
+    const out = [];
+    for (let y = 0; y < h; y++) {
+      let row = "";
+      for (let x = 0; x < w; x++) {
+        const c = g(x, y);
+        row += c !== "." ? c : ([g(x - 1, y), g(x + 1, y), g(x, y - 1), g(x, y + 1)].some(n => n !== ".") ? "o" : ".");
+      }
+      out.push(row);
+    }
+    return out;
+  }
+  const pretty = map => outline(epx(map));
+  function sprite(map, pal, x, y, u, flip) {
+    const w = map[0].length;
+    for (let r = 0; r < map.length; r++) for (let c = 0; c < w; c++) {
+      const col = pal[map[r][c]]; if (!col) continue;
+      ctx.fillStyle = col;
+      ctx.fillRect(Math.round(x + (flip ? w - 1 - c : c) * u), Math.round(y + r * u), u, u);
+    }
+  }
+
+  // Aisha: ash-blonde bob with darker roots, big round glasses,
+  // black turtleneck, burgundy cardigan, a phone in a cat-ear case
+  const GIRL_BODY = [
+    "....rrrr....",
+    "..rrhhhhrr..",
+    ".rhhhhhhhhr.",
+    ".hhHHHHHHhh.",
+    ".hHSSSSSSHh.",
+    ".hGGGSSGGGh.",
+    ".hGEGGGGEGh.",
+    ".hGGGSSGGGh.",
+    ".hHSSSSSSHh.",
+    ".hHSSRRSSHh.",
+    ".hH.SSSS.Hh.",
+    "..CCTTTTCC..",
+    ".CCCTTTTCCQq",
+    ".CCCTTTTCCQQ",
+    ".SCCTTTTCCS.",
+    "..CCTTTTCC..",
+  ];
+  const LEGS = {
+    A: ["...LL..LL...", "...LL..LL...", "...BB..BB..."],
+    B: ["..LL....LL..", ".LL......LL.", ".BB......BB."],
+    C: ["....LLLL....", "....LLLL....", "....BBBB...."],
+  };
+  const GPAL = {
+    r: "#8a7058", h: "#cdb48f", H: "#efe0c2", S: C.skin, G: "#4a3530", E: "#1c1214", R: "#e58fa5",
+    T: "#2b2430", C: "#9b2335", Q: "#a9b2b8", q: "#d9dee2", L: "#2b2430", B: C.petal, o: C.ink,
+  };
+  const GIRL = Object.fromEntries(Object.entries(LEGS).map(([k, legs]) => [k, pretty(GIRL_BODY.concat(legs))]));
+  const GIRL_W = GIRL.C[0].length, GIRL_H = GIRL.C.length;
+
+  const SHEEP = pretty([
+    "...WWWWWW...",
+    ".WWWWWWWWWW.",
+    "WWFFFWWWWWWW",
+    "WFEFEFWWWWWW",
+    "WFFRFFWWWWWW",
+    ".WFFFWWWWWW.",
+    "..WWWWWWWW..",
+    "..GG....GG..",
+  ]);
+  const SPAL = { W: C.petal, F: C.skin, E: C.void, R: C.rose, G: C.plum, o: C.ink };
+  const LOTUS = pretty([
+    "......P......",
+    ".....PpP.....",
+    "....PpppP....",
+    ".P..PpppP..P.",
+    ".PP.PpppP.PP.",
+    ".PpPPpppPPpP.",
+    "..PppPpPppP..",
+    "...PPpppPP...",
+  ]);
+  const LPAL = { P: C.rose, p: C.blush, o: C.ink };
+  const HEART = pretty([".RR.RR.", "RRWRRRR", "RRRRRRR", ".RRRRR.", "..RRR..", "...R..."]);
+  const HPAL = { R: C.rose, W: C.petal, o: C.ink };
+  const FLOWER = epx([".P.P.", "PPpPP", ".pYp.", "PPpPP", ".P.P."]);
+  const BUD = epx([".p.", "pYp", ".p."]);
+  const VINE = "#5f9e72", LEAF = "#a6dcb4";
+
+  // ---------- images drawn sharp on top of the pixel world ----------
+  const img = src => { const i = new Image(); i.src = src; return i; };
+  const SHOTS = {
+    cqa: img("img/cqa-dialog.png"), cqaM: img("img/cqa-mobile.png"),
+    bilim: img("img/bilim-home.png"), bilimM: img("img/bilim-mobile.png"),
+  };
+  // your photo: photo.jpg next to this file
+  const PHOTO = img("photo.jpg");
+  let photoCrop = null;
+  const FRAME_RATIO = 1.22;
+  PHOTO.onload = () => {
+    const iw = PHOTO.naturalWidth, ih = PHOTO.naturalHeight;
+    let sw = iw, sh = iw * FRAME_RATIO, sx = 0, sy = 0;
+    if (sh > ih) { sh = ih; sw = ih / FRAME_RATIO; sx = (iw - sw) / 2; } else sy = (ih - sh) * .25;
+    photoCrop = [sx, sy, sw, sh];
+  };
+  let overlay = [], glows = [], glowsFront = [];
+  const sharpImage = (im, crop, x, y, w, h) => overlay.push({ im, crop, x, y, w, h });
+  const label = (text, x, y, color, size) => overlay.push({ text, x, y, color, size });
+  const glow = (x, y, r, color, a, front) => (front ? glowsFront : glows).push({ x, y, r, color, a });
+
+  // soft light sprites, one per colour
+  const glowCache = {};
+  function glowSprite(color) {
+    if (glowCache[color]) return glowCache[color];
+    const c = mk(64, 64), g = c.getContext("2d"), [r, gg, b] = hex(color);
+    const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grad.addColorStop(0, `rgba(${r},${gg},${b},1)`); grad.addColorStop(.35, `rgba(${r},${gg},${b},.35)`); grad.addColorStop(1, `rgba(${r},${gg},${b},0)`);
+    g.fillStyle = grad; g.fillRect(0, 0, 64, 64);
+    return (glowCache[color] = c);
+  }
+
+  // ---------- world layout ----------
+  let W, H, P, U, groundY, worldLen, dpr, narrow, Wcss, Hcss;
+  const stations = [
+    { id: "home",   at: .12 },
+    { id: "cqa",    at: .27 },
+    { id: "bilim",  at: .42 },
+    { id: "eco",    at: .58 },
+    { id: "chest",  at: .73 },
+    { id: "trophy", at: .86 },
+    { id: "flag",   at: .985 },
+  ];
+  let hearts = [], stars = [], city = [], clouds = [], trees = [], flies = [], dust = [], shooting = null, nextShoot = 4000;
+  let eco = 0;
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+
+  // pre-rendered layers
+  let skyNight, skyDay, hillsNight, mountainsDay, hillsDay, groundNight, groundDay, cloudSprites = [];
+  const STRIP = 1024, TILE = 128;
+
+  function gradientCanvas(w, h, stops) {
+    const c = mk(w, h), g = c.getContext("2d"), id = g.createImageData(w, h), d = id.data;
+    const cols = stops.map(s => hex(s[1]));
+    for (let y = 0; y < h; y++) {
+      const t = y / (h - 1);
+      let i = 0; while (i < stops.length - 2 && t > stops[i + 1][0]) i++;
+      const f = (t - stops[i][0]) / (stops[i + 1][0] - stops[i][0]);
+      for (let x = 0; x < w; x++) {
+        const col = f > bayer(x, y) ? cols[i + 1] : cols[i];
+        const k = (y * w + x) * 4; d[k] = col[0]; d[k + 1] = col[1]; d[k + 2] = col[2]; d[k + 3] = 255;
+      }
+    }
+    g.putImageData(id, 0, 0); return c;
+  }
+  function stripCanvas(heightAt, colorAt) {
+    const c = mk(STRIP, groundY), g = c.getContext("2d"), id = g.createImageData(STRIP, groundY), d = id.data;
+    for (let x = 0; x < STRIP; x++) {
+      const h = Math.round(heightAt(x)), slope = heightAt(x + 1) - heightAt(x - 1);
+      for (let y = groundY - h; y < groundY; y++) {
+        const col = colorAt(x, y, y - (groundY - h), h, slope); if (!col) continue;
+        const k = (y * STRIP + x) * 4; d[k] = col[0]; d[k + 1] = col[1]; d[k + 2] = col[2]; d[k + 3] = 255;
+      }
+    }
+    g.putImageData(id, 0, 0); return c;
+  }
+  function groundTile(day) {
+    const gh = H - groundY + 6, c = mk(TILE, gh), g = c.getContext("2d"), id = g.createImageData(TILE, gh), d = id.data;
+    const put = (x, y, col) => { const k = (y * TILE + x) * 4; d[k] = col[0]; d[k + 1] = col[1]; d[k + 2] = col[2]; d[k + 3] = 255; };
+    const N = day
+      ? { a: hex("#9bd67a"), b: hex("#7cc35e"), hi: hex("#c2eaa6"), band: hex("#5ea852"), dirt: hex("#6b4a32"), deep: hex("#4a3122"), sp: hex("#86603f"), stone: hex("#9a8a7a"), f1: hex(C.rose), f2: hex("#ffe08a") }
+      : { a: hex(C.rose), b: hex(C.berry), hi: hex(C.blush), band: hex("#5a1f3d"), dirt: hex("#170a12"), deep: hex("#0b0408"), sp: hex("#2c1424"), stone: hex("#3a1a30") };
+    for (let x = 0; x < TILE; x++) {
+      const blade = hash(x, 7) ;
+      for (let y = 0; y < gh; y++) {
+        const yy = y - 6;
+        if (yy < 0) {
+          if (day) {
+            if (blade < .45 && yy >= -1 - Math.floor(blade * 8)) put(x, y, blade < .15 ? N.hi : N.a);
+            if (blade > .97 && yy >= -3) put(x, y, yy === -3 ? (hash(x, 3) < .5 ? N.f1 : N.f2) : N.b);
+          }
+          continue;
+        }
+        if (yy < 2) { put(x, y, ((x >> 3) & 1) ? N.b : N.a); if (yy === 0 && hash(x, 1) < .15) put(x, y, N.hi); continue; }
+        if (yy < 4) { put(x, y, N.band); continue; }
+        const depth = (yy - 4) / (gh - 10);
+        let col = depth > bayer(x, y) + .25 ? N.deep : N.dirt;
+        const n = hash(x, yy);
+        if (n < .05) col = N.sp;
+        // little stones with a light top edge
+        const sx = x >> 3, sy = (yy - 4) >> 3, sn = hash(sx, sy + 50);
+        if (sn < .18 && ((x & 7) - 3.5) ** 2 + (((yy - 4) & 7) - 4) ** 2 < 7) col = ((yy - 4) & 7) < 3 ? N.sp : N.stone;
+        put(x, y, col);
+      }
+    }
+    g.putImageData(id, 0, 0); return c;
+  }
+  function cloudSprite(s) {
+    const w = 46 * s, h = 18 * s, c = mk(w, h), g = c.getContext("2d");
+    const blobs = Array.from({ length: 5 }, (_, i) => ({ x: w * (.15 + i * .17) + rnd() * 4, y: h * .62 - rnd() * h * .35, r: h * (.28 + rnd() * .22) }));
+    const id = g.createImageData(w, h), d = id.data;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (!blobs.some(b => (x - b.x) ** 2 + (y - b.y) ** 2 < b.r * b.r) || y > h * .85) continue;
+      const shade = y / h > .55 + bayer(x, y) * .2;
+      const col = shade ? [220, 236, 246] : [255, 255, 255];
+      const k = (y * w + x) * 4; d[k] = col[0]; d[k + 1] = col[1]; d[k + 2] = col[2]; d[k + 3] = 255;
+    }
+    g.putImageData(id, 0, 0); return c;
+  }
+
+  function build() {
+    dpr = Math.min(devicePixelRatio || 1, 2);
+    Wcss = innerWidth; Hcss = innerHeight; narrow = Wcss < 700;
+    P = Math.max(2, Math.round(Math.min(Hcss, Wcss * 1.4) / 300));
+    W = Math.ceil(Wcss / P); H = Math.ceil(Hcss / P); U = 2;
+    cv.width = Wcss * dpr; cv.height = Hcss * dpr;
+    main.setTransform(dpr, 0, 0, dpr, 0, 0);
+    bgC.width = fgC.width = W; bgC.height = fgC.height = H;
+    groundY = Math.round(H * (narrow ? .80 : .78));
+    worldLen = Math.max(Math.round(6000 / P), W * 7);
+    stations.forEach(s => s.x = s.at * (worldLen - W) + W * (narrow ? .5 : .3));
+
+    const TAU = Math.PI * 2, tri = v => 1 - Math.abs((v - Math.floor(v)) * 2 - 1);
+    skyNight = gradientCanvas(W, groundY, [[0, "#000000"], [.45, "#07030b"], [.75, "#160817"], [1, "#2c0f26"]]);
+    skyDay = gradientCanvas(W, groundY, [[0, "#4fa8e0"], [.45, "#7fc6ee"], [.8, "#b7e2f6"], [1, "#e6f6fb"]]);
+    const gy = groundY;
+    hillsNight = stripCanvas(
+      x => gy * (.2 + .07 * Math.sin(TAU * x / STRIP * 2) + .05 * Math.sin(TAU * x / STRIP * 5 + 1) + .025 * Math.sin(TAU * x / STRIP * 13)),
+      (x, y, d) => d < 1 ? hex("#3a1830") : (d < 3 && hash(x, y) < .5 ? hex("#2a1124") : (hash(x, y) < .04 ? hex("#2a1124") : (d / 30 > bayer(x, y) + .3 ? hex("#14070f") : hex("#1d0c18")))));
+    const snowLine = gy * .5;
+    mountainsDay = stripCanvas(
+      x => gy * (.2 + .3 * tri(x / STRIP * 3) + .13 * tri(x / STRIP * 7 + .3) + .05 * tri(x / STRIP * 17 + .1)),
+      (x, y, d, h, slope) => {
+        const lit = slope > 0, top = gy - y;
+        const snow = top > snowLine + (bayer(x, y) - .5) * 6 + Math.sin(x * .3) * 3;
+        if (snow) return hex(lit ? "#f6fbff" : "#cfdfea");
+        if (d < 1) return hex(lit ? "#c9dbe6" : "#9fb9ca");
+        const fade = (top / gy) * 1.6 > bayer(x, y) + .2;
+        return hex(lit ? (fade ? "#a9c2d3" : "#93b0c4") : (fade ? "#86a3b8" : "#7593aa"));
+      });
+    hillsDay = stripCanvas(
+      x => gy * (.1 + .1 * tri(x / STRIP * 4 + .5) + .05 * tri(x / STRIP * 9) + .015 * Math.sin(x * .2)),
+      (x, y, d) => d < 1 ? hex("#a8dc8c") : d < 3 ? hex("#86c46f") : (hash(x, y) < .05 ? hex("#7fb867") : (d / 26 > bayer(x, y) + .2 ? hex("#5a9a56") : hex("#6aaa62"))));
+    groundNight = groundTile(false); groundDay = groundTile(true);
+
+    seed = 11;
+    cloudSprites = [cloudSprite(1), cloudSprite(1), cloudSprite(2)];
+    clouds = Array.from({ length: 6 }, (_, i) => ({ x: i * (W + 120) / 6, y: H * (.06 + rnd() * .22), k: i % 3 }));
+    trees = []; for (let x = 0; x < worldLen * .5 + W; x += 24 + Math.floor(rnd() * 44)) trees.push({ x, s: 1 + Math.floor(rnd() * 2) });
+    seed = 7;
+    stars = Array.from({ length: Math.round(W * groundY / 220) }, () => ({ x: rnd() * W * 2, y: rnd() * groundY * .78, big: rnd() < .1, p: rnd() * 6.28 }));
+    city = []; let cx = W * .55, n = 0;
+    const marks = ["bayterek", "khan", "expo"];
+    while (cx < worldLen * .5 + W) {
+      if (n % 5 === 2) {
+        const kind = marks[(n / 5 | 0) % 3];
+        const w = { bayterek: 30, khan: 74, expo: 54 }[kind] * U;
+        city.push({ x: cx, w, kind }); cx += w + U * 8;
+      } else {
+        const w = (8 + Math.floor(rnd() * 10)) * U * 2, h = Math.min((14 + Math.floor(rnd() * 26)) * U * 2, groundY * .62);
+        city.push({ x: cx, w, h, seed: Math.floor(rnd() * 1e6), ant: rnd() < .35 }); cx += w + U * 4;
+      }
+      n++;
+    }
+    for (let x = W * .55 - U * 4; x > -W; ) { const w = (8 + Math.floor(rnd() * 10)) * U * 2, h = Math.min((14 + Math.floor(rnd() * 22)) * U * 2, groundY * .6); x -= w; city.unshift({ x, w, h, seed: Math.floor(rnd() * 1e6), ant: rnd() < .35 }); x -= U * 4; }
+    hearts = []; for (let x = 140; x < worldLen - 100; x += 64 * U) { if (stations.some(s => Math.abs(s.x - x) < 60 * U)) continue; hearts.push({ x, y: groundY - (26 + (Math.floor(x / 128) % 3) * 10) * U, got: false }); }
+    flies = Array.from({ length: narrow ? 16 : 28 }, () => ({ x: rnd() * W, y: groundY * (.35 + rnd() * .6), p: rnd() * 6.28, s: .2 + rnd() * .4, c: rnd() < .6 ? C.rose : "#ffe08a" }));
+  }
+
+  // ---------- state ----------
+  let camX = 0, lastY = scrollY, facing = 1, moving = 0, frame = 0, frameT = 0, got = 0, started = false, lastT = 0, dustT = 0;
+  const elHearts = document.getElementById("hearts"), elIcon = document.getElementById("hicon");
+  const elProg = document.getElementById("prog"), elTitle = document.getElementById("title"), elHint = document.getElementById("hint");
+  const panels = Object.fromEntries(stations.map(s => [s.id, document.getElementById("p-" + s.id)]));
+  let active = null;
+  function progress() { const max = document.documentElement.scrollHeight - innerHeight; return max > 0 ? Math.min(1, Math.max(0, scrollY / max)) : 0; }
+
+  function disc(cx, cy, r, colorAt, u = U) {
+    for (let yy = -r; yy < r; yy++) for (let xx = -r; xx < r; xx++) {
+      if ((xx + .5) ** 2 + (yy + .5) ** 2 >= r * r) continue;
+      const c = colorAt(xx, yy); if (c) rect(cx + xx * u, cy + yy * u, u, u, c);
+    }
+  }
+
+  // ---------- Astana landmarks ----------
+  function drawBayterek(x, t, light) {
+    const tall = Math.min(98 * U, Math.round(groundY * .74));
+    const top = groundY - tall, crown = top + 26 * U;
+    rect(x - 9 * U, groundY - 6 * U, 18 * U, 6 * U, C.plum);
+    rect(x - 9 * U, groundY - 6 * U, 18 * U, 1, "#6a3150");
+    rect(x - 6 * U, groundY - 9 * U, 12 * U, 3 * U, C.night);
+    for (let i = 0; i < 4; i++) {
+      const off = (i - 1.5) * 2;
+      for (let y = groundY - 9 * U, k = 0; y > crown; y -= 1, k++) {
+        const nar = 1 - k / (tall * 1.6);
+        rect(x + off * U * nar - .5, y - 1, 1, 1, i % 3 ? C.petal : C.blush);
+        if (i === 1 && k % 6 === 0) rect(x + off * U * nar, y - 1, 2 * U * nar, 1, "#d9a9bf");
+      }
+    }
+    for (let k = 0; k < 18; k++) {
+      rect(x - 8 - k, crown - k * 1.6, 1, 2, C.petal);
+      rect(x + 7 + k, crown - k * 1.6, 1, 2, C.petal);
+    }
+    const g = reduce ? 1 : .8 + Math.sin(t / 500) * .2;
+    disc(x, top + 9 * U, 10, (xx, yy) => {
+      if ((xx + 3) ** 2 + (yy + 3) ** 2 < 6) return C.petal;
+      if (xx + yy > 7) return C.berry;
+      return xx + yy > 3 + bayer(xx & 3, yy & 3) * 4 ? "#ff6fa5" : C.rose;
+    });
+    rect(x - .5, top - 4 * U, 1, 4 * U, C.blush);
+    if (light) glow(x, top + 9 * U, 46, C.rose, .5 * g * light);
+  }
+  function drawKhanShatyr(x, w, light) {
+    const h = Math.min(78 * U, Math.round(groundY * .6)), ax = x + w * .64, ay = groundY - h;
+    for (let y = ay; y < groundY; y++) {
+      const k = (y - ay) / h, l = ax - (ax - x) * k, r = ax + (x + w - ax) * k, row = y - ay;
+      rect(l, y, r - l, 1, C.night);
+      rect(l, y, r - l, 1, (row & 15) === 0 ? C.plum : C.night);
+      for (let m = 1; m < 8; m++) { const mx = l + (r - l) * m / 8; if ((row & 1) === 0) rect(mx, y, 1, 1, "#3a1830"); }
+      rect(l, y, 1, 1, C.rose); rect(r - 1, y, 1, 1, C.berry);
+      if (row > h - 18 && row % 5 === 0) for (let wx = l + 5; wx < r - 5; wx += 9) rect(wx, y, 4, 2, hash(wx | 0, row) < .7 ? C.berry : C.rose);
+    }
+    rect(ax - .5, ay - 10 * U, 1, 10 * U, C.blush);
+    if (light) glow(x + w / 2, groundY - 8, 50, C.berry, .25 * light);
+  }
+  function drawExpo(x, t, light) {
+    const r = 24, cy = groundY - 6 * U - r * U;
+    rect(x - 22 * U, groundY - 6 * U, 44 * U, 6 * U, C.plum);
+    rect(x - 22 * U, groundY - 6 * U, 44 * U, 1, "#6a3150");
+    rect(x - 16 * U, groundY - 8 * U, 32 * U, 2 * U, C.berry);
+    const phase = reduce ? 0 : Math.floor(t / 400) % 6;
+    disc(x, cy, r * 2, (xx, yy) => {
+      const d2 = (xx + .5) ** 2 + (yy + .5) ** 2;
+      if (d2 > (r * 2 - 2) ** 2) return (xx + yy < 0) ? C.blush : C.berry;
+      if (yy % 9 === 0) return C.plum;
+      if (Math.abs(xx) % 11 === 0) return C.plum;
+      if (((xx / 11 | 0) + (yy / 9 | 0) + 40) % 6 === phase && yy < 0) return C.rose;
+      return (xx < -10 && yy < -18) ? (bayer(xx & 3, yy & 3) > .5 ? "#3a1830" : "#2c1422") : C.night;
+    }, 1);
+    if (light) glow(x, cy, 70, C.rose, .22 * light);
+  }
+
+  // ---------- eco startup logo: a planet with little people standing on it ----------
+  function drawPlanet(cx, cy, r, u) {
+    for (let yy = -r; yy < r; yy++) for (let xx = -r; xx < r; xx++) {
+      const d2 = (xx + .5) ** 2 + (yy + .5) ** 2; if (d2 >= r * r) continue;
+      const edge = d2 > (r - 1.2) ** 2;
+      const land = Math.sin(xx * .55 + 1) + Math.cos(yy * .7 - xx * .25) + Math.sin((xx + yy) * .3) > .9;
+      const shade = xx + yy > r * .55 + (bayer(xx & 3, yy & 3) - .5) * 3;
+      const c = edge ? "#2f6f7d" : land ? (shade ? "#5ea852" : "#7cc46a") : (shade ? "#4fa9c2" : "#6cc3d5");
+      ctx.fillStyle = c; ctx.fillRect(Math.round(cx + xx * u), Math.round(cy + yy * u), u, u);
+    }
+    ctx.fillStyle = "#d9f4fb"; ctx.fillRect(Math.round(cx - r * .55 * u), Math.round(cy - r * .6 * u), u * 2, u);
+    const shirts = [C.rose, "#ffe08a", "#a6dcb4", C.blush, C.berry];
+    [-150, -118, -90, -62, -30].forEach((deg, i) => {
+      const a = deg * Math.PI / 180;
+      const px = Math.round(cx + Math.cos(a) * (r - .5) * u), py = Math.round(cy + Math.sin(a) * (r - .5) * u);
+      const f = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(px + x * u, py + y * u, w * u, h * u); };
+      f(-.5, -6, 1, 1, C.skin); f(-1.5, -5, 3, 1, shirts[i]); f(-.5, -4, 1, 2, shirts[i]); f(-.5, -2, 1, 2, "#2b2430");
+    });
+  }
+  function drawEcoStation(x) {
+    const r = narrow ? 13 : 17, cy = groundY - 10 * U - r * U;
+    rect(x - 12 * U, groundY - 6 * U, 24 * U, 6 * U, C.plum);
+    rect(x - 12 * U, groundY - 6 * U, 24 * U, 1, "#6a3150");
+    rect(x - 8 * U, groundY - 9 * U, 16 * U, 3 * U, "#5ea852");
+    drawPlanet(x, cy, r, U);
+    label("ECOLOGY OF THE FUTURE", x, cy - r * U - 8 * U, "#2f6f7d", 10);
+  }
+  (function drawLogoInPanel() {
+    const c = document.getElementById("ecoLogo"); if (!c) return;
+    const keep = ctx; ctx = c.getContext("2d");
+    ctx.fillStyle = "#cfecf8"; ctx.fillRect(0, 0, c.width, c.height);
+    drawPlanet(48, 56, 9, 4);
+    ctx = keep;
+  })();
+
+  // ---------- daytime nature near the eco startup ----------
+  function drawDayScene(t, cam) {
+    ctx.drawImage(skyDay, 0, 0);
+    disc(W * .8, H * .17, 9, (xx, yy) => (xx + 3) ** 2 + (yy + 3) ** 2 < 14 ? "#fff6c9" : (xx + yy > 6 ? "#f4c64e" : "#ffe08a"));
+    for (const cl of clouds) {
+      const s = cloudSprites[cl.k], span = W + 140;
+      const x = (((cl.x - cam * .05 + (reduce ? 0 : t * .004)) % span) + span) % span - 70;
+      ctx.drawImage(s, Math.round(x), Math.round(cl.y));
+    }
+    tileStrip(mountainsDay, cam * .2);
+    tileStrip(hillsDay, cam * .35);
+    for (const tr of trees) {
+      const x = Math.round(tr.x - cam * .5); if (x < -30 || x > W + 30) continue;
+      const s = tr.s, layers = 4 + s * 2;
+      rect(x - 1, groundY - 6, 3, 6, "#6b4a32"); rect(x - 1, groundY - 6, 1, 6, "#8a6444");
+      for (let i = 0; i < layers; i++) {
+        const w = 4 + i * 2, y = groundY - 6 - (layers - i) * 3;
+        rect(x - w / 2, y, w, 3, "#3f8f4f");
+        rect(x - w / 2, y, Math.ceil(w / 2), 3, "#56a862");
+        rect(x - w / 2, y + 2, w, 1, "#2f7340");
+      }
+    }
+  }
+  function tileStrip(strip, off) {
+    const o = ((Math.round(off) % STRIP) + STRIP) % STRIP;
+    for (let x = -o; x < W; x += STRIP) ctx.drawImage(strip, x, 0);
+  }
+  function tileGround(tile, cam) {
+    const o = ((Math.round(cam) % TILE) + TILE) % TILE;
+    for (let x = -o; x < W; x += TILE) ctx.drawImage(tile, x, groundY - 6);
+  }
+
+  // ---------- places ----------
+  function drawHome(x, light) {
+    const w = 34 * U, h = 24 * U, y = groundY - h;
+    for (let i = 0; i < 9; i++) {
+      const rw = w + U * 4 - i * 4 * U, rx = x - w / 2 - U * 2 + i * 2 * U, ry = y - (i + 1) * 2 * U;
+      rect(rx, ry, rw, 2 * U, i % 2 ? C.berry : C.rose);
+      rect(rx, ry + 2 * U - 1, rw, 1, "#8f2f5a");
+      for (let k = rx + 3 + (i % 2) * 3; k < rx + rw - 2; k += 6) rect(k, ry + 1, 1, 2, i % 2 ? "#a83a69" : "#ffa8c8");
+    }
+    rect(x - w / 2, y, w, h, C.plum);
+    for (let by = y + 2; by < groundY - 1; by += 4) for (let bx = x - w / 2 + ((by / 4) & 1) * 3; bx < x + w / 2 - 2; bx += 7) rect(bx, by, 5, 1, "#5a2a44");
+    rect(x - w / 2, y, w, 1, "#6a3150");
+    rect(x - 4 * U, y + h - 12 * U, 8 * U, 12 * U, C.night);
+    rect(x - 4 * U, y + h - 12 * U, 8 * U, 1, "#3a1830");
+    rect(x + 2 * U, y + h - 6 * U, U, U, "#ffe08a");
+    for (const dx of [-13, 6]) {
+      rect(x + dx * U - 1, y + 5 * U - 1, 7 * U + 2, 6 * U + 2, "#2a1124");
+      rect(x + dx * U, y + 5 * U, 7 * U, 6 * U, "#ffd6a8");
+      rect(x + dx * U, y + 5 * U, 7 * U, 2, "#ffe9c9");
+      rect(x + (dx + 3) * U, y + 5 * U, U, 6 * U, C.plum); rect(x + dx * U, y + 8 * U, 7 * U, 1, C.plum);
+      if (light) glow(x + (dx + 3.5) * U, y + 8 * U, 26, "#ffcf8f", .45 * light);
+    }
+    sprite(LOTUS, LPAL, x + 9 * U, y - 2 * U - LOTUS.length, 1);
+    drawPortrait(x - w / 2);
+  }
+  function drawPortrait(rightEdge) {
+    const fw = Math.round(narrow ? Math.min(30 * U, W * .3) : 36 * U), fh = Math.round(fw * FRAME_RATIO);
+    const bt = 3 * U, fx = rightEdge - fw - bt - (narrow ? 4 : 10) * U, fy = groundY - fh - bt - 16 * U;
+    rect(fx + fw / 2 - 2 * U, fy + fh, 4 * U, groundY - fy - fh, C.plum);
+    rect(fx + fw / 2 - 2 * U, fy + fh, 1, groundY - fy - fh, "#6a3150");
+    rect(fx - bt, fy - bt, fw + 2 * bt, fh + 2 * bt, C.berry);
+    rect(fx - bt, fy - bt, fw + 2 * bt, 1, C.rose);
+    rect(fx - U, fy - U, fw + 2 * U, fh + 2 * U, C.blush);
+    if (photoCrop) sharpImage(PHOTO, photoCrop, fx, fy, fw, fh);
+    else { rect(fx, fy, fw, fh, C.night); label("P1", fx + fw / 2, fy + fh / 2 + 4, C.rose, 14); }
+    const x0 = fx - bt, y0 = fy - bt, x1 = fx + fw + bt, y1 = fy + fh + bt, mid = bt / 2;
+    const path = [];
+    for (let px = x0; px < x1; px++) path.push([px, y0 + mid, 0, -1]);
+    for (let py = y0; py < y1; py++) path.push([x1 - mid - 1, py, 1, 0]);
+    for (let px = x1 - 1; px >= x0; px--) path.push([px, y1 - mid - 1, 0, 1]);
+    for (let py = y1 - 1; py >= y0; py--) path.push([x0 + mid, py, -1, 0]);
+    path.forEach(([px, py, nx, ny], i) => {
+      const wob = Math.round(Math.sin(i * .25) * 1.5);
+      rect(px + nx * wob, py + ny * wob, 1, 1, VINE);
+      if (i % 11 === 5) { rect(px + nx * (wob + 2) - (nx ? 0 : 1), py + ny * (wob + 2) - (ny ? 0 : 1), nx ? 2 : 3, ny ? 2 : 3, LEAF); rect(px + nx * (wob + 2), py + ny * (wob + 2), 1, 1, "#d2f0da"); }
+    });
+    const open = reduce ? 1 : Math.floor(performance.now() / 900) % 2;
+    const pal = (a, b) => ({ P: a, p: b, Y: "#ffe08a" });
+    const big = [[x0, y0], [x1, y0], [x0, y1], [x1, y1], [x0 + (x1 - x0) * .5, y0], [x0, y0 + (y1 - y0) * .45], [x1, y0 + (y1 - y0) * .62]];
+    big.forEach(([cx, cy], i) => sprite(FLOWER, i % 2 ? pal(C.rose, C.blush) : pal(C.blush, C.petal), cx - 5, cy - 5, 1));
+    const buds = [[x0 + (x1 - x0) * .25, y0], [x0 + (x1 - x0) * .75, y0], [x0, y0 + (y1 - y0) * .8], [x1, y0 + (y1 - y0) * .25], [x0 + (x1 - x0) * .4, y1], [x0 + (x1 - x0) * .7, y1]];
+    buds.forEach(([cx, cy], i) => { if (open || i % 2) sprite(BUD, pal(C.rose, (i % 3) ? C.rose : C.berry), cx - 3, cy - 3, 1); else rect(cx - 1, cy - 1, 2, 2, C.rose); });
+    label("PLAYER 1", fx + fw / 2, y0 - 4 * U, C.blush, 9);
+  }
+  function bezel(x, y, w, h) {
+    rect(x - 2 * U, y - 2 * U, w + 4 * U, h + 4 * U, C.blush);
+    rect(x - 2 * U, y - 2 * U, w + 4 * U, 1, C.petal);
+    rect(x - 2 * U, y + h + 2 * U - 1, w + 4 * U, 1, "#d98fb0");
+    rect(x - 1, y - 1, w + 2, h + 2, C.ink);
+  }
+  function drawScreen(x, shot, phone, name, light) {
+    const sw = Math.round(narrow ? W * .86 : Math.min(118 * U, W * .44)), sh = Math.round(sw * .62);
+    const cx = Math.round(narrow ? x : x + W * .07), y = groundY - sh - (narrow ? 8 : 12) * U;
+    rect(cx - 4 * U, y + sh, 8 * U, groundY - y - sh, C.plum); rect(cx - 4 * U, y + sh, 1, groundY - y - sh, "#6a3150");
+    rect(cx - 16 * U, groundY - 2 * U, 32 * U, 2 * U, C.berry); rect(cx - 16 * U, groundY - 2 * U, 32 * U, 1, C.rose);
+    bezel(cx - sw / 2, y, sw, sh);
+    sharpImage(shot, null, cx - sw / 2, y, sw, sh);
+    if (light) glow(cx, y + sh / 2, sw * .6, "#ffd6ea", .12 * light);
+    label(name, cx, y - 5 * U, C.rose, 12);
+    const pw = Math.round(narrow ? sw * .34 : sw * .27), ph = Math.round(pw * 2.05), b = 3;
+    let px = cx - sw / 2 - pw - 6 * U;
+    if (px < 8) px = Math.round(cx - sw / 2 - pw * .25);
+    const py = groundY - ph - 2 * U;
+    rect(px - b * 2, py - b * 3, pw + b * 4, ph + b * 6, C.blush);
+    rect(px - b * 2, py - b * 3, pw + b * 4, 1, C.petal);
+    rect(px - b, py - b * 2, pw + b * 2, ph + b * 4, C.night);
+    rect(px + pw / 2 - 3 * b, py - b * 2 + 1, 6 * b, 1, C.plum);
+    sharpImage(phone, null, px, py, pw, ph);
+  }
+  function drawChest(x, t, open) {
+    const w = 22 * U, h = 14 * U, y = groundY - h;
+    rect(x - w / 2 - 1, y - 1, w + 2, h + 1, C.ink);
+    rect(x - w / 2, y, w, h, "#8f2f5a");
+    for (let k = y + 3; k < groundY; k += 4) rect(x - w / 2, k, w, 1, "#6e2245");
+    rect(x - w / 2, y + 5 * U, w, 2 * U, "#ffe08a"); rect(x - w / 2, y + 5 * U, w, 1, "#fff3b8");
+    rect(x - 2 * U, y + 3 * U, 4 * U, 5 * U, "#ffe08a"); rect(x - 1, y + 5 * U, 2, 2, C.ink);
+    const lid = open ? 8 * U : 0;
+    rect(x - w / 2 - 1, y - 6 * U - lid - 1, w + 2, 6 * U + 2, C.ink);
+    rect(x - w / 2, y - 6 * U - lid, w, 6 * U, C.rose);
+    rect(x - w / 2, y - 6 * U - lid, w, 2, C.blush);
+    rect(x - w / 2, y - 2 - lid, w, 2, "#ffe08a");
+    if (open) {
+      glow(x, y - 4 * U, 40, "#ffe08a", .55);
+      if (!reduce) for (let i = 0; i < 8; i++) { const a = t / 300 + i; const sx = x + Math.cos(a) * 14 * U, sy = y - 12 * U + Math.sin(a * 1.3) * 6 * U; rect(sx, sy, 2, 2, i % 2 ? C.blush : "#fff3b8"); glow(sx, sy, 6, "#ffe08a", .5, true); }
+    }
+  }
+  function drawTrophy(x, t) {
+    const y = groundY - 30 * U, bob = reduce ? 0 : Math.round(Math.sin(t / 400) * 2) * U;
+    rect(x - 10 * U, groundY - 8 * U, 20 * U, 8 * U, C.plum); rect(x - 10 * U, groundY - 8 * U, 20 * U, 1, "#6a3150");
+    rect(x - 7 * U - 1, y + bob - 1, 14 * U + 2, 10 * U + 2, C.ink);
+    rect(x - 7 * U, y + bob, 14 * U, 10 * U, "#ffd36b");
+    rect(x + 2 * U, y + bob, 5 * U, 10 * U, "#e8b445");
+    rect(x - 10 * U, y + 2 * U + bob, 3 * U, 5 * U, "#ffd36b"); rect(x + 7 * U, y + 2 * U + bob, 3 * U, 5 * U, "#e8b445");
+    rect(x - 2 * U, y + 10 * U + bob, 4 * U, 6 * U, "#e8b445"); rect(x - 5 * U, y + 16 * U + bob, 10 * U, 3 * U, "#ffd36b");
+    rect(x - 5 * U, y + 2 * U + bob, 2, 5 * U, "#fff6c9");
+    glow(x, y + 5 * U + bob, 50, "#ffe08a", .35);
+  }
+  function drawFlag(x, t) {
+    rect(x - U, groundY - 48 * U, 2 * U, 48 * U, C.petal); rect(x, groundY - 48 * U, 1, 48 * U, "#d9a9bf");
+    rect(x - 2, groundY - 48 * U - 4, 5, 4, "#ffe08a");
+    rect(x - 3 * U, groundY - 3 * U, 6 * U, 3 * U, C.plum);
+    for (let i = 0; i < 16; i++) {
+      const wv = reduce ? 0 : Math.round(Math.sin(t / 220 - i * .5) * 1.5);
+      rect(x + U + i * U, groundY - 47 * U + wv, U, 12 * U, ((i >> 1) & 1) ? C.rose : C.blush);
+      rect(x + U + i * U, groundY - 47 * U + wv + 12 * U - 1, U, 1, C.berry);
+    }
+  }
+
+  // ---------- main loop ----------
+  function draw(t) {
+    const dt = Math.min(50, t - lastT || 16); lastT = t;
+    const p = progress();
+    camX = p * (worldLen - W);
+    const charX = camX + W * (narrow ? .5 : .3);
+    const dy = scrollY - lastY; lastY = scrollY;
+    if (Math.abs(dy) > .5) { moving = 140; facing = dy > 0 ? 1 : -1; if (!started) { started = true; elHint.classList.add("hide"); } }
+    else moving = Math.max(0, moving - 16);
+    if (t - frameT > 110) { frame++; frameT = t; }
+    overlay = []; glows = []; glowsFront = [];
+
+    // how much daytime nature is showing (near the eco startup)
+    const ecoSt = stations.find(s => s.id === "eco");
+    const ecoTarget = Math.abs(ecoSt.x - charX) < Math.max(340 / P, W * .3) ? 1 : 0;
+    eco += (ecoTarget - eco) * (reduce ? 1 : .06);
+    if (Math.abs(ecoTarget - eco) < .01) eco = ecoTarget;
+    const ea = Math.round(eco * 8) / 8, night = 1 - ea;
+
+    // ===== background buffer =====
+    ctx = bg;
+    ctx.drawImage(skyNight, 0, 0);
+    ctx.fillStyle = C.void; ctx.fillRect(0, groundY, W, H - groundY);
+    for (const s of stars) {
+      const sx = Math.round(((s.x - camX * .08) % (W * 2) + W * 2) % (W * 2) - W * .5);
+      const a = reduce ? .7 : (Math.sin(t / 650 + s.p) + 1) / 2;
+      if (a < .25) continue;
+      ctx.globalAlpha = a;
+      if (s.big) { rect(sx, s.y, 1, 1, C.petal); rect(sx - 1, s.y, 1, 1, C.rose); rect(sx + 1, s.y, 1, 1, C.rose); rect(sx, s.y - 1, 1, 1, C.rose); rect(sx, s.y + 1, 1, 1, C.rose); }
+      else rect(sx, s.y, 1, 1, a > .7 ? C.blush : "#8a5a70");
+      ctx.globalAlpha = 1;
+    }
+    // shooting star
+    if (!reduce) {
+      nextShoot -= dt;
+      if (!shooting && nextShoot < 0) { shooting = { x: W * (.2 + Math.random() * .6), y: groundY * (.05 + Math.random() * .25), life: 0 }; nextShoot = 6000 + Math.random() * 7000; }
+      if (shooting) {
+        shooting.life += dt; const k = shooting.life / 700;
+        for (let i = 0; i < 14; i++) { ctx.globalAlpha = Math.max(0, (1 - i / 14) * (1 - k)); rect(shooting.x + k * 90 - i, shooting.y + k * 40 - i * .45, 1, 1, i < 2 ? C.petal : C.blush); }
+        ctx.globalAlpha = 1; if (k >= 1) shooting = null;
+      }
+    }
+    // moon with craters
+    const mx = Math.round(W * .78 - camX * .03), my = Math.round(H * .16), mr = 12;
+    disc(mx, my, mr, (xx, yy) => {
+      const crater = (xx + 4) ** 2 + (yy - 2) ** 2 < 6 || (xx - 3) ** 2 + (yy + 4) ** 2 < 4 || (xx - 5) ** 2 + (yy - 5) ** 2 < 3;
+      const shade = xx + yy > 8 + bayer(xx & 3, yy & 3) * 5;
+      return crater ? (shade ? "#c98aa8" : "#f0bcd2") : (shade ? "#e4a9c3" : "#ffd9e8");
+    }, 1);
+    glow(mx, my, 60, C.rose, .28);
+    // far hills and the city
+    tileStrip(hillsNight, camX * .2);
+    const cOff = camX * .5;
+    for (const b of city) {
+      const x = Math.round(b.x - cOff); if (x + b.w < 0 || x > W) continue;
+      if (b.kind === "bayterek") { drawBayterek(x + b.w / 2, t, night); continue; }
+      if (b.kind === "khan") { drawKhanShatyr(x, b.w, night); continue; }
+      if (b.kind === "expo") { drawExpo(x + b.w / 2, t, night); continue; }
+      const top = groundY - b.h;
+      rect(x, top, b.w, b.h, C.night);
+      rect(x + b.w - 3, top, 3, b.h, "#100710");
+      rect(x, top, 1, b.h, "#2a1424");
+      rect(x - 1, top - 2, b.w + 2, 2, C.plum);
+      if (b.ant) { rect(x + b.w * .3, top - 12, 1, 10, C.plum); if ((Math.floor(t / 700) & 1) || reduce) { rect(x + b.w * .3 - 1, top - 13, 3, 2, "#ff4f7a"); glow(x + b.w * .3, top - 12, 8, "#ff4f7a", .6 * night); } }
+      let k = 0, bright = null;
+      for (let wy = top + 8; wy < groundY - 12; wy += 12) for (let wx = x + 6; wx < x + b.w - 8; wx += 12) {
+        const hv = hash(b.seed + k++, 3);
+        const flick = reduce ? 0 : hash(b.seed + k, Math.floor(t / 1600));
+        if (hv < .32 && flick > .04) {
+          const c = hv < .08 ? "#ffd6a8" : hv < .16 ? C.rose : C.berry;
+          rect(wx, wy, 4, 6, c); rect(wx, wy, 4, 1, hv < .08 ? "#fff0d6" : C.blush);
+          if (hv < .08) bright = [wx + 2, wy + 3];
+        } else rect(wx, wy, 4, 6, "#21101d");
+      }
+      if (bright) glow(bright[0], bright[1], 14, "#ffcf8f", .4 * night);
+    }
+    if (ea > 0) { ctx.globalAlpha = ea; drawDayScene(t, camX); ctx.globalAlpha = 1; }
+    tileGround(groundNight, camX);
+    if (ea > 0) { ctx.globalAlpha = ea; tileGround(groundDay, camX); ctx.globalAlpha = 1; }
+
+    let near = null, nearD = Infinity;
+    for (const s of stations) {
+      const sx = s.x - camX, d = Math.abs(s.x - charX);
+      if (d < nearD) { nearD = d; near = s; }
+      if (sx < -W * .7 || sx > W * 1.5) continue;
+      if (s.id === "home") drawHome(sx, night);
+      if (s.id === "cqa") drawScreen(sx, SHOTS.cqa, SHOTS.cqaM, "CQA", night);
+      if (s.id === "bilim") {
+        drawScreen(sx, SHOTS.bilim, SHOTS.bilimM, "BILIM BUDDY", night);
+        const bob = reduce ? 0 : (Math.floor(t / 300) % 2) * U;
+        sprite(SHEEP, SPAL, sx + (narrow ? 10 * U : W * .07 + 10 * U), groundY - SHEEP.length - bob, 1);
+      }
+      if (s.id === "eco") drawEcoStation(sx + 26 * U);
+      if (s.id === "chest") drawChest(sx, t, d < 200 / P);
+      if (s.id === "trophy") drawTrophy(sx, t);
+      if (s.id === "flag") drawFlag(sx, t);
+    }
+
+    // ===== foreground buffer: hearts, player, particles =====
+    ctx = fg; ctx.clearRect(0, 0, W, H);
+    for (const h of hearts) {
+      if (!h.got && charX > h.x) { h.got = true; got++; elHearts.textContent = "x " + got; elIcon.classList.remove("pop"); void elIcon.offsetWidth; elIcon.classList.add("pop"); for (let i = 0; i < 6; i++) dust.push({ x: h.x - camX, y: h.y + 6, vx: (Math.random() - .5) * .12, vy: -.05 - Math.random() * .08, life: 600, c: C.blush }); }
+      const hx = h.x - camX; if (h.got || hx < -20 || hx > W + 20) continue;
+      const bob = reduce ? 0 : Math.round(Math.sin(t / 300 + h.x) * 2);
+      sprite(HEART, HPAL, Math.round(hx - HEART[0].length / 2), h.y + bob, 1);
+      glow(hx, h.y + bob + 6, 12, C.rose, .35, true);
+    }
+    // fireflies at night, pollen by day
+    for (const f of flies) {
+      if (!reduce) { f.x += Math.sin(t / 900 + f.p) * f.s * .3 - .05; f.y += Math.cos(t / 1100 + f.p * 2) * f.s * .2; }
+      const fx = ((f.x - camX * .3) % W + W) % W;
+      const tw = reduce ? .8 : (Math.sin(t / 400 + f.p * 3) + 1) / 2;
+      if (tw < .2) continue;
+      ctx.globalAlpha = tw;
+      rect(fx, f.y, 1, 1, ea > .5 ? "#fffbe6" : f.c);
+      ctx.globalAlpha = 1;
+      if (night > 0) glow(fx, f.y, 7, f.c, .6 * tw * night, true);
+    }
+    // the player, with dust puffs while walking
+    const gx = Math.round(charX - camX - GIRL_W / 2);
+    const idleBob = (!moving && !reduce) ? (Math.floor(t / 500) % 2) : 0;
+    const map = moving ? (frame % 2 ? GIRL.A : GIRL.B) : GIRL.C;
+    if (moving && !reduce && t - dustT > 90) { dustT = t; dust.push({ x: charX - camX - facing * 6, y: groundY - 2, vx: -facing * (.02 + Math.random() * .03), vy: -.02 - Math.random() * .02, life: 420, c: ea > .5 ? "#c9b38a" : "#6a3150" }); }
+    dust = dust.filter(d => (d.life -= dt) > 0);
+    for (const d of dust) { d.x += d.vx * dt; d.y += d.vy * dt; ctx.globalAlpha = Math.min(1, d.life / 300); rect(d.x, d.y, 2, 2, d.c); }
+    ctx.globalAlpha = 1;
+    rect(gx + 6, groundY - 1, GIRL_W - 12, 2, "rgba(0,0,0,.45)");
+    sprite(map, GPAL, gx, groundY - GIRL_H + 1 + idleBob, 1, facing < 0);
+
+    // ===== compose on screen =====
+    main.imageSmoothingEnabled = false;
+    main.clearRect(0, 0, Wcss, Hcss);
+    main.drawImage(bgC, 0, 0, W * P, H * P);
+    const drawGlows = list => {
+      main.globalCompositeOperation = "lighter";
+      for (const g of list) { if (g.a <= 0) continue; main.globalAlpha = Math.min(1, g.a); const r = g.r * P; main.drawImage(glowSprite(g.color), g.x * P - r, g.y * P - r, r * 2, r * 2); }
+      main.globalCompositeOperation = "source-over"; main.globalAlpha = 1;
+    };
+    drawGlows(glows);
+    for (const o of overlay) {
+      if (o.im) {
+        if (!(o.im.complete && o.im.naturalWidth)) continue;
+        main.imageSmoothingEnabled = true; main.imageSmoothingQuality = "high";
+        const c = o.crop || [0, 0, o.im.naturalWidth, Math.min(o.im.naturalHeight, o.im.naturalWidth * o.h / o.w)];
+        main.drawImage(o.im, ...c, Math.round(o.x * P), Math.round(o.y * P), Math.round(o.w * P), Math.round(o.h * P));
+        main.imageSmoothingEnabled = false;
+      } else {
+        main.font = `${o.size}px "Press Start 2P"`; main.textAlign = "center";
+        main.fillStyle = "#000"; main.fillText(o.text, Math.round(o.x * P) + 2, Math.round(o.y * P) + 2);
+        main.fillStyle = o.color; main.fillText(o.text, Math.round(o.x * P), Math.round(o.y * P));
+      }
+    }
+    main.drawImage(fgC, 0, 0, W * P, H * P);
+    drawGlows(glowsFront);
+
+    // HUD, panels, title
+    elProg.style.width = (p * 100).toFixed(1) + "%";
+    elTitle.classList.toggle("away", p > .035);
+    const want = nearD < Math.max(260 / P, W * .22) ? near.id : null;
+    if (want !== active) { if (active) panels[active].classList.remove("show"); if (want) panels[want].classList.add("show"); active = want; }
+    requestAnimationFrame(draw);
+  }
+
+  // ---------- controls ----------
+  const step = () => Math.max(120, innerHeight * .25);
+  addEventListener("keydown", e => {
+    if (e.key === "ArrowRight" || e.key === "d") { scrollBy({ top: step(), behavior: "smooth" }); e.preventDefault(); }
+    if (e.key === "ArrowLeft" || e.key === "a") { scrollBy({ top: -step(), behavior: "smooth" }); e.preventDefault(); }
+  });
+  let hold = null;
+  function holdBtn(el, dir) {
+    const go = () => scrollBy({ top: dir * 24 });
+    el.addEventListener("pointerdown", e => { e.preventDefault(); go(); clearInterval(hold); hold = setInterval(go, 30); });
+    ["pointerup", "pointerleave", "pointercancel"].forEach(ev => el.addEventListener(ev, () => clearInterval(hold)));
+  }
+  holdBtn(document.getElementById("bl"), -1);
+  holdBtn(document.getElementById("br"), 1);
+
+  addEventListener("resize", build);
+  build();
+
+  const bar = document.getElementById("loadbar");
+  let pct = 0;
+  const boot = setInterval(() => {
+    pct = Math.min(100, pct + 20); bar.style.width = pct + "%";
+    if (pct === 100) { clearInterval(boot); setTimeout(() => document.getElementById("boot").classList.add("gone"), 150); }
+  }, reduce ? 10 : 110);
+
+  (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => requestAnimationFrame(draw));
+})();
+</script>
+</body>
+</html>
