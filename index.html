@@ -776,19 +776,31 @@
     const left = margin + Math.max(0, (avail - group) / 2);
     return { sw, pw, phoneRel: left - at, cxRel: left + pw + gap + sw / 2 - at };
   }
-  function drawScreen(x, shot, phone, name, light) {
-    const L = narrow ? null : screenLayout();
-    const sw = narrow ? Math.round(W * .86) : L.sw, sh = Math.round(sw * .62);
-    const cx = Math.round(narrow ? x : x + L.cxRel), y = groundY - sh - (narrow ? 8 : 12) * U;
+  // On phones the info panel covers the top of the screen, so the phone and the monitor
+  // stand side by side in the space between the panel and the ground.
+  function phoneLayout(panelEl) {
+    const b = 3, gap = 4 * U, margin = 6;
+    const panelBottom = panelEl ? (panelEl.offsetTop + panelEl.offsetHeight + 10) / P : 0;
+    const availH = groundY - 2 * U - panelBottom - 8 * U - b * 3;    // room for the name label above
+    let ph = Math.max(48, availH), pw = ph / 2.05;
+    let sh = ph * .68, sw = sh / .62;
+    const total = pw + b * 4 + gap + sw + 4 * U, maxTotal = W - margin * 2;
+    if (total > maxTotal) { const k = maxTotal / total; ph *= k; pw *= k; sh *= k; sw *= k; }
+    const groupW = pw + b * 4 + gap + sw + 4 * U;
+    return { ph: Math.round(ph), pw: Math.round(pw), sh: Math.round(sh), sw: Math.round(sw), phoneRel: -groupW / 2 + b * 2, cxRel: groupW / 2 - 2 * U - sw / 2 };
+  }
+  function drawScreen(x, shot, phone, name, light, panelEl) {
+    const L = narrow ? phoneLayout(panelEl) : screenLayout();
+    const sw = L.sw, sh = narrow ? L.sh : Math.round(sw * .62);
+    const cx = Math.round(x + L.cxRel), y = groundY - sh - (narrow ? 5 : 12) * U;
     rect(cx - 4 * U, y + sh, 8 * U, groundY - y - sh, C.plum); rect(cx - 4 * U, y + sh, 1, groundY - y - sh, "#6a3150");
     rect(cx - 16 * U, groundY - 2 * U, 32 * U, 2 * U, C.berry); rect(cx - 16 * U, groundY - 2 * U, 32 * U, 1, C.rose);
     bezel(cx - sw / 2, y, sw, sh);
     sharpImage(shot, null, cx - sw / 2, y, sw, sh);
     if (light) glow(cx, y + sh / 2, sw * .6, "#ffd6ea", .12 * light);
-    label(name, cx, y - 5 * U, C.rose, 12);
-    const pw = narrow ? Math.round(sw * .34) : L.pw, ph = Math.round(pw * 2.05), b = 3;
-    // on phones there is no room beside the monitor, so the phone stands in front of its corner
-    const px = narrow ? Math.round(cx - sw / 2 - pw * .25) : Math.round(x + L.phoneRel);
+    const pw = L.pw, ph = narrow ? L.ph : Math.round(pw * 2.05), b = 3;
+    const px = Math.round(x + L.phoneRel);
+    label(name, narrow ? x : cx, (narrow ? Math.min(y, groundY - ph - 2 * U - b * 3) : y) - 5 * U, C.rose, narrow ? 10 : 12);
     const py = groundY - ph - 2 * U;
     rect(px - b * 2, py - b * 3, pw + b * 4, ph + b * 6, C.blush);
     rect(px - b * 2, py - b * 3, pw + b * 4, 1, C.petal);
@@ -921,11 +933,11 @@
       if (d < nearD) { nearD = d; near = s; }
       if (sx < -W * .7 || sx > W * 1.5) continue;
       if (s.id === "home") drawHome(sx, night);
-      if (s.id === "cqa") drawScreen(sx, SHOTS.cqa, SHOTS.cqaM, "CQA", night);
+      if (s.id === "cqa") drawScreen(sx, SHOTS.cqa, SHOTS.cqaM, "CQA", night, panels.cqa);
       if (s.id === "bilim") {
-        drawScreen(sx, SHOTS.bilim, SHOTS.bilimM, "BILIM BUDDY", night);
+        drawScreen(sx, SHOTS.bilim, SHOTS.bilimM, "BILIM BUDDY", night, panels.bilim);
         const bob = reduce ? 0 : (Math.floor(t / 300) % 2) * U;
-        sprite(SHEEP, SPAL, sx + (narrow ? 10 * U : screenLayout().cxRel + 10 * U), groundY - SHEEP.length - bob, 1);
+        sprite(SHEEP, SPAL, sx + (narrow ? phoneLayout(panels.bilim).cxRel + 4 * U : screenLayout().cxRel + 10 * U), groundY - SHEEP.length - bob, 1);
       }
       if (s.id === "eco") drawEcoStation(sx + 26 * U);
       if (s.id === "chest") drawChest(sx, t, d < 200 / P);
